@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=GitHub Copilot
+Comment=Agent-native desktop app for GitHub Copilot
+Exec=github-copilot %u
+Icon=com.github.Copilot
+Type=Application
+Terminal=false
+Categories=Development;
+MimeType=x-scheme-handler/github-app;x-scheme-handler/ghapp;x-scheme-handler/gh;
+StartupWMClass=github

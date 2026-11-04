@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd /app/extra
+
+# Unpack inside /app/extra rather than /tmp: the payload is ~620 MB, and
+# keeping the work dir on the destination filesystem makes the final step a
+# rename instead of a second full-size copy.
+work_dir=/app/extra/.unpack
+trap 'rm -rf "$work_dir"' EXIT
+rm -rf "$work_dir"
+mkdir -p "$work_dir"
+
+# Only one of these is present: the manifest pins each to its architecture
+# with only-arches. The ELF e_machine each must carry is checked below.
+deb=""
+for candidate in copilot-x64.deb copilot-arm64.deb; do
+  if [ -f "$candidate" ]; then
+    deb="$candidate"
+    break
+  fi
+done
+
+case "$deb" in
+  copilot-x64.deb) machine=62 ;;    # EM_X86_64
+  copilot-arm64.deb) machine=183 ;; # EM_AARCH64
+  *)
+    echo "GitHub Copilot .deb not found in /app/extra" >&2
+    exit 1
+    ;;
+esac
+
+# apply_extra runs against the app's runtime, which here is the GNOME SDK, so
+# binutils' ar is available and no unpacker has to be bundled. The data member
+# is streamed straight into bsdtar, which detects its compression itself
+# (zstd today), so the 650 MB data.tar never lands on disk.
+member="$(ar t "$deb" | grep -E '^data\.tar(\.[a-z0-9]+)?$' || true)"
+if [ -z "$member" ] || [ "$(printf '%s\n' "$member" | wc -l)" -ne 1 ]; then
+  echo "Expected exactly one data.tar member in $deb" >&2
+  exit 1
+fi
+ar p "$deb" "$member" | bsdtar -xf - -C "$work_dir" ./usr
+
+payload="$work_dir/usr"
+
+is_elf() {
+  [ "$(head -c 4 "$1" | od -An -tx1 | tr -d ' \n')" = "7f454c46" ]
+}
+
+# e_machine is the little-endian u16 at offset 18. A swapped pair of sources
+# would otherwise install one architecture's binaries into the other's
+# Flatpak, and nothing would fail until the app was launched.
+elf_machine() {
+  od -An -tu2 -j18 -N2 --endian=little "$1" | tr -d ' \n'
+}
+
+for file in \
+  "$payload/bin/github" \
+  "$payload/bin/git-credential-copilot" \
+  "$payload/lib/GitHub Copilot/native-plugins/libgithub_app_linux_pulse_plugin.so"
+do
+  if [ ! -f "$file" ] || ! is_elf "$file"; then
+    echo "Required Linux ELF is missing from $deb: ${file#"$payload/"}" >&2
+    exit 1
+  fi
+  if [ "$(elf_machine "$file")" != "$machine" ]; then
+    echo "${file#"$payload/"} in $deb is not built for this architecture" >&2
+    exit 1
+  fi
+done
+
+if [ ! -f "$payload/lib/GitHub Copilot/app-extensions/catalog.json" ]; then
+  echo "Resource directory is incomplete in $deb" >&2
+  exit 1
+fi
+
+# Tauri resolves its resource directory as <exe_dir>/../lib/<productName>, and
+# the git credential sidecar is looked up next to the executable. Moving the
+# .deb's usr/ tree wholesale keeps both relationships intact:
+#   /app/extra/copilot/bin/github
+#   /app/extra/copilot/bin/git-credential-copilot
+#   /app/extra/copilot/lib/GitHub Copilot/
+rm -rf copilot
+mv "$payload" copilot
+
+chmod -R a+rX copilot
+chmod a+rx copilot/bin/github copilot/bin/git-credential-copilot
+
+rm -f copilot-x64.deb copilot-arm64.deb
+echo "GitHub Copilot extra data installed"

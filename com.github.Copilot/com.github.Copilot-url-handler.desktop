@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=GitHub Copilot URL Handler
+Comment=Handle GitHub Copilot app links
+Exec=github-copilot %u
+Icon=com.github.Copilot
+Type=Application
+Terminal=false
+NoDisplay=true
+MimeType=x-scheme-handler/github-app;x-scheme-handler/ghapp;x-scheme-handler/gh;

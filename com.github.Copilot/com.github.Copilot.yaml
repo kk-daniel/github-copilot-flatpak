@@ -1,0 +1,113 @@
+app-id: com.github.Copilot
+# GitHub Copilot is a Tauri app: its UI is WebKitGTK 4.1 rather than a bundled
+# Chromium, so it needs the GNOME runtime instead of the Electron BaseApp. The
+# SDK rather than the Platform, because the agent runs git and other developer
+# tools inside the sandbox. GNOME 50 is the last release on freedesktop 25.08,
+# which is the branch the com.visualstudio.code.tool extensions are built for;
+# a GNOME bump has to move the two extension versions below with it.
+runtime: org.gnome.Sdk
+runtime-version: "50"
+sdk: org.gnome.Sdk
+command: github-copilot
+tags: [proprietary]
+separate-locales: false
+add-extensions:
+  com.visualstudio.code.tool:
+    directory: tools
+    subdirectories: true
+    version: '25.08'
+    add-ld-path: lib
+    no-autodownload: true
+    autodelete: false
+  org.freedesktop.Sdk.Extension.node24:
+    directory: lib/sdk/node24
+    version: '25.08'
+    add-ld-path: lib
+    no-autodownload: false
+    autodelete: false
+finish-args:
+  - --require-version=0.10.3
+  - --share=network
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  # Notification sounds, and the microphone for voice dictation, which goes
+  # through the app's own PulseAudio plugin.
+  - --socket=pulseaudio
+  - --device=dri
+  - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
+  # Sandbox-private ~/.copilot: CLI config, session state, plugins, extensions
+  # and, by default, the per-session git worktrees. Stored on the host at
+  # ~/.var/app/com.github.Copilot/.copilot and not shared with a host-installed
+  # Copilot CLI.
+  - --persist=.copilot
+  # Deliberately absent: --talk-name=org.freedesktop.secrets. Secret Service
+  # has no per-application isolation, and the app falls back to its own
+  # database for the OAuth token when no keyring is reachable. README documents
+  # the optional override.
+  - --talk-name=org.freedesktop.Notifications
+  # Tray icon through libayatana-appindicator (StatusNotifierItem). Without
+  # these the registration silently fails under Flatpak and no icon appears.
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=com.canonical.AppMenu.Registrar
+  - --talk-name=com.canonical.AppMenu.Registrar.*
+  - --talk-name=com.canonical.indicator.application
+  # libappindicator claims a per-PID bus name under
+  # com.canonical.indicator.application; without ownership, the registration
+  # call to the watcher silently no-ops.
+  - --own-name=com.canonical.indicator.application.*
+cleanup:
+  - /include
+  - /lib/pkgconfig
+  - /share/gtk-doc
+  - '*.la'
+modules:
+  - shared-modules/libayatana-appindicator/libayatana-appindicator-gtk3.json
+
+  - name: copilot
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 copilot.sh /app/bin/github-copilot
+      - install -Dm755 apply_extra /app/bin/apply_extra
+      - install -Dm644 ${FLATPAK_ID}.metainfo.xml -t /app/share/metainfo
+      - install -Dm644 ${FLATPAK_ID}.desktop -t /app/share/applications
+      - install -Dm644 ${FLATPAK_ID}-url-handler.desktop -t /app/share/applications
+      - install -Dm644 ${FLATPAK_ID}.png /app/share/icons/hicolor/256x256/apps/${FLATPAK_ID}.png
+      - mkdir -p /app/extra/copilot
+      - mkdir -p /app/lib/sdk/node24
+      - mkdir -p /app/tools
+      - ln -s /app/lib/sdk/node24/bin/node /app/bin/node
+      - ln -s /app/lib/sdk/node24/bin/npm /app/bin/npm
+      - ln -s /app/lib/sdk/node24/bin/npx /app/bin/npx
+      - ln -s /app/lib/sdk/node24/bin/corepack /app/bin/corepack
+    sources:
+      # GitHub's official Linux build, from the github/app release assets. The
+      # .deb carries the Tauri binary, the git credential sidecar and the
+      # resources directory Tauri resolves next to it, and depends on nothing
+      # the GNOME runtime lacks besides the tray library above. The release
+      # URLs are versioned; update-release-metadata.py fills in sha256 and
+      # size from the GitHub release API.
+      - type: extra-data
+        filename: copilot-x64.deb
+        only-arches: [x86_64]
+        url: https://github.com/github/app/releases/download/v1.1.34/GitHub-Copilot-linux-x64.deb
+        sha256: 115d3c32c860c6c9b7935f69d2824b2663edc02afd083b8fbb2571c1bef9ae4e
+        size: 371291596
+      - type: extra-data
+        filename: copilot-arm64.deb
+        only-arches: [aarch64]
+        url: https://github.com/github/app/releases/download/v1.1.34/GitHub-Copilot-linux-arm64.deb
+        sha256: bb503cff03349c00e9b6104441b6293da4a9a2ab5df5e896c71a7044a3f7469c
+        size: 333681574
+      - type: file
+        path: apply_extra
+      - type: file
+        path: copilot.sh
+      - type: file
+        path: com.github.Copilot.metainfo.xml
+      - type: file
+        path: com.github.Copilot.desktop
+      - type: file
+        path: com.github.Copilot-url-handler.desktop
+      - type: file
+        path: com.github.Copilot.png

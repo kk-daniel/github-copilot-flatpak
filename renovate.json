@@ -1,0 +1,62 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "platformAutomerge": false,
+  "packageRules": [
+    {
+      "description": "GitHub Copilot app",
+      "groupName": "copilot",
+      "matchPackageNames": ["copilot"],
+      "automerge": true
+    },
+    {
+      "description": "GNOME runtime. Held for approval on the Dependency Dashboard: GNOME 51 moves to freedesktop 26.08, and the com.visualstudio.code.tool and node24 extension versions in the manifest have to move with it by hand -- and the VS Code tool extensions are only published up to 25.08.",
+      "matchPackageNames": ["org.gnome.Sdk"],
+      "dependencyDashboardApproval": true
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "GitHub Copilot .deb release assets. Both architectures come from the same github/app release, so one pattern matches both URLs and the version is the only part replaced.",
+      "managerFilePatterns": [
+        "/\\/com\\.github\\.Copilot\\.yaml$/"
+      ],
+      "matchStrings": [
+        "url: https://github\\.com/github/app/releases/download/v(?<currentValue>[\\d.]+)/GitHub-Copilot-linux-(?:x64|arm64)\\.deb"
+      ],
+      "depNameTemplate": "copilot",
+      "packageNameTemplate": "github/app",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$",
+      "versioningTemplate": "loose"
+    },
+    {
+      "customType": "regex",
+      "description": "GNOME runtime version (manifest and CI image)",
+      "managerFilePatterns": [
+        "/\\/com\\.github\\.Copilot\\.yaml$/",
+        "/\\.github\\/workflows\\/flatpak-build\\.yaml$/"
+      ],
+      "matchStrings": [
+        "runtime-version: \"(?<currentValue>\\d+)\"",
+        "image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-(?<currentValue>\\d+)"
+      ],
+      "depNameTemplate": "org.gnome.Sdk",
+      "datasourceTemplate": "custom.flathub-runtime",
+      "versioningTemplate": "loose"
+    }
+  ],
+  "customDatasources": {
+    "flathub-runtime": {
+      "defaultRegistryUrlTemplate": "https://flathub.org/api/v2/runtimes",
+      "format": "json",
+      "transformTemplates": [
+        "{ \"releases\": $each($$, function($v, $k) { $k })[$contains(\"org.gnome.Sdk/x86_64/\")] ~> $map(function($k) { { \"version\": $split($k, \"/\")[2] } }) }"
+      ]
+    }
+  }
+}
