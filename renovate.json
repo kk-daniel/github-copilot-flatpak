@@ -7,7 +7,7 @@
   "platformAutomerge": false,
   "packageRules": [
     {
-      "description": "GitHub Copilot app. Matched by depName: its packageName is github/app, so matchPackageNames would miss it, leaving the branch ungrouped and out of reach of the post-renovate job.",
+      "description": "GitHub Copilot app",
       "groupName": "copilot",
       "matchDepNames": ["copilot"],
       "automerge": true
