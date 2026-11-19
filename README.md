@@ -56,8 +56,11 @@ carry the `.deb` inside it, and these do.
 `/app/extra/copilot`. Tauri finds its resources at `<exe_dir>/../lib/GitHub Copilot`,
 so that layout is kept as is. It also checks the ELF machine of the binaries
 against the `.deb`'s architecture, so a mixed-up pair of sources fails at
-install time instead of at launch. The GNOME SDK supplies `ar` and `bsdtar`, so
-unlike the sibling Flatpaks no 7-Zip module is bundled.
+install time instead of at launch. The package ships `libonnxruntime.so` without
+the `libonnxruntime.so.1` name that `libfoundry_local.so` links against, so
+`apply_extra` links each bundled library under its SONAME, as `ldconfig` would.
+The GNOME SDK supplies `ar`, `readelf` and `bsdtar`, so unlike the sibling
+Flatpaks no 7-Zip module is bundled.
 
 The tray icon needs `libayatana-appindicator3`, which the GNOME runtime lacks.
 It is built from vendored Flathub shared modules; see

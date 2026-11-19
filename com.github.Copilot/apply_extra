@@ -74,6 +74,22 @@ if [ ! -f "$payload/lib/GitHub Copilot/app-extensions/catalog.json" ]; then
   exit 1
 fi
 
+# The .deb ships libonnxruntime.so under its unversioned name only, while its
+# SONAME -- and the DT_NEEDED entry of libfoundry_local.so next to it -- is
+# libonnxruntime.so.1. libfoundry_local.so searches its RUNPATH, $ORIGIN, for
+# that name, so without the link it loads only if the app happens to have
+# loaded ONNX Runtime first. Link every bundled library under its SONAME, the
+# way ldconfig would for a system library directory.
+lib_dir="$payload/lib/GitHub Copilot"
+for lib in "$lib_dir"/*.so; do
+  [ -f "$lib" ] || continue
+  is_elf "$lib" || continue
+  soname="$(LC_ALL=C readelf -d "$lib" | sed -n 's/^.*(SONAME).*\[\(.*\)\]$/\1/p')"
+  if [ -n "$soname" ] && [ "$soname" != "${lib##*/}" ] && [ ! -e "$lib_dir/$soname" ]; then
+    ln -s "${lib##*/}" "$lib_dir/$soname"
+  fi
+done
+
 # Tauri resolves its resource directory as <exe_dir>/../lib/<productName>, and
 # the git credential sidecar is looked up next to the executable. Moving the
 # .deb's usr/ tree wholesale keeps both relationships intact:
