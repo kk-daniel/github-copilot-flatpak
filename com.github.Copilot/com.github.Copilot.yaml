@@ -6,7 +6,7 @@ app-id: com.github.Copilot
 # which is the branch the com.visualstudio.code.tool extensions are built for;
 # a GNOME bump has to move the two extension versions below with it.
 runtime: org.gnome.Sdk
-runtime-version: "50"
+runtime-version: "51"
 sdk: org.gnome.Sdk
 command: github-copilot
 tags: [proprietary]
