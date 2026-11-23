@@ -90,15 +90,15 @@ modules:
       - type: extra-data
         filename: copilot-x64.deb
         only-arches: [x86_64]
-        url: https://github.com/github/app/releases/download/v1.4.3/GitHub-Copilot-linux-x64.deb
-        sha256: 288abfd5e910115b99211041c0ad3ee18ef97c7448b2270f6358a90be9a243df
-        size: 384019886
+        url: https://github.com/github/app/releases/download/v1.5.0/GitHub-Copilot-linux-x64.deb
+        sha256: 474b55803adea1d7b28db20cfe25ec5158542ea2259795b44b49d338bf8d32c3
+        size: 493476552
       - type: extra-data
         filename: copilot-arm64.deb
         only-arches: [aarch64]
-        url: https://github.com/github/app/releases/download/v1.4.3/GitHub-Copilot-linux-arm64.deb
-        sha256: 96186c5e018d306322d7d6387b084fcde29b324fbe072f4e3609b55ff1655a94
-        size: 345351292
+        url: https://github.com/github/app/releases/download/v1.5.0/GitHub-Copilot-linux-arm64.deb
+        sha256: 47fff55247da7ffa6e9c0cd33ac71214b59cc33949934f9ef4489ae0253b31b5
+        size: 439394350
       - type: file
         path: apply_extra
       - type: file
